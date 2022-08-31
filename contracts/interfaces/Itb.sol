@@ -20,6 +20,7 @@ interface ITB {
         uint256 salePrice;
         string metadataTB;
         bool markedForSale;
+        bool mintEnabled;
     }
 
     /**
