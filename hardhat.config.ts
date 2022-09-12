@@ -1,5 +1,6 @@
 import '@nomiclabs/hardhat-etherscan';
-import '@nomiclabs/hardhat-waffle';
+import "@nomiclabs/hardhat-ethers";
+import '@nomicfoundation/hardhat-chai-matchers';
 import '@openzeppelin/hardhat-upgrades';
 import '@primitivefi/hardhat-marmite';
 import '@typechain/hardhat';
