@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 interface ITA {
     // structs, events, functions (public and external in contract become external in the interface)
@@ -28,6 +28,13 @@ interface ITA {
     }
 
     /**
+     * @dev This function defines TB pool address
+     * @notice this function should check that only the owner can call it
+     * @param _tBpoolAddress address of TB pool
+     **/
+    function setInstances(address payable _tBpoolAddress) external;
+
+    /**
      * @dev This function is used to mint TA
      * @notice this function should check if TA is expired before processing payments and mint
      * @param _name IPFS link retrieved from Pinata
@@ -49,7 +56,14 @@ interface ITA {
     /**
      * @dev This function is used rent a selected TA
      * @notice this function should check if TA is available to be rented
-     * @param taID the id of the TA already minted in the "mintTA" function
+     * @param _taID the id of the TA already minted in the "mintTA" function
      **/
-    function rentTA(uint256 taID) external payable;
+    function rentTA(uint256 _taID) external payable;
+
+    /**
+     * @dev This function is used to check if a given address has a TA id corresponding license active or inactive
+     * @param _taID the id of the TA already minted in the "mintTA" function
+     * @param _addressToCheck is the user address which will be checked for active/inactive renting license
+    **/
+    function checkIfTAisActive(uint256 _taID, address _addressToCheck) external;
 }

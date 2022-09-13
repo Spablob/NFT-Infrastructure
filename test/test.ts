@@ -44,10 +44,7 @@ describe('NFT Licensing', async () => {
   });
 
   describe('TA Interactions', async () => {
-    it('Owner and User 1 fail to reset TB address', async () => {
-      await expect(TAcontract.connect(accounts[0]).setInstances(pool.address)).to.be.revertedWith(
-        'Cannot set TB contract address twice'
-      );
+    it('User 1 fail to reset TB address', async () => {
       await expect(TAcontract.connect(accounts[1]).setInstances(pool.address)).to.be.revertedWith(
         'Ownable: caller is not the owner'
       );
@@ -58,7 +55,7 @@ describe('NFT Licensing', async () => {
         'Fried Rice',
         'QmTmfTk7N4SBZu2WeUjtMh9CPQvKs4gGH4fjqR5GiMBys9',
         ethers.utils.parseEther('1'),
-        80,
+        8000,
         604800,
         10000
       );
@@ -126,7 +123,7 @@ describe('NFT Licensing', async () => {
         'Malaysian Fried Rice',
         'QmTmfTk7N4SBZu2WeUjtMh9CPQvKs4gGH4fjqR5GiMBys9',
         ethers.utils.parseEther('2'),
-        15
+        1500
       );
     });
     it('User 3 tries to register with same name or metadata twice but fails', async () => {

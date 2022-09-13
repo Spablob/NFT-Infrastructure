@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 import {TA} from "./TA.sol";
 import {TB} from "./TB.sol";
@@ -7,29 +7,37 @@ import "hardhat/console.sol";
 
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
+/**
+ * @title TB staking pool
+ * @dev Used to distribute rewards to TB holders
+ **/
 contract TBpool is ERC1155Holder {
     //===============Variables=============
-    TB TBcontract;
-
-    //===============Functions=============
-    constructor(address payable _TBaddress) {
-        TBcontract = TB(_TBaddress);
-    }
-
-    mapping(address => PoolStaker) public staker;
     struct PoolStaker {
         uint256 amount; // The NFT tokens quantity the user has staked.
         uint256 rewards; // The reward tokens quantity the user can harvest
         uint256 rewardDebt; // The amount relative to accumulatedRewardsPerShare the user can't get as reward
     }
 
-    mapping(address => mapping(uint256 => uint256)) public depositsMade;
+    TB TBcontract;
 
-    // TBpool variables
+    mapping(address => PoolStaker) public staker; // stores staker's information for each staker address
+    mapping(address => mapping(uint256 => uint256)) public depositsMade; // stores how much an address has deposited of each token TB id
+
     uint256 public tokensStaked; // Total NFT tokens staked
     uint256 public lastInflow; // Last block number the user had their rewards calculated
     uint256 public accumulatedRewardsPerShare; // Accumulated rewards per share times REWARDS_PRECISION
 
+    //===============Functions=============
+    constructor(address payable _TBaddress) {
+        TBcontract = TB(_TBaddress);
+    }
+
+    /**
+     * @dev This function is used to stake NFTs in the pool to have access to rewards
+     * @param _tbID the id of the TB which will be staked
+     * @param _quantity quantity of TB to be staked
+     **/
     function stakeNFT(uint256 _tbID, uint256 _quantity) external {
         require(TBcontract.balanceOf(msg.sender, _tbID) >= _quantity, "User does not own enough tokens");
 
@@ -48,6 +56,9 @@ contract TBpool is ERC1155Holder {
         TBcontract.safeTransferFrom(msg.sender, address(this), _tbID, _quantity, "");
     }
 
+    /**
+     * @dev This function is used for the staker to harvest the rewards he is entitled to
+     **/
     function harvestRewards() public {
         uint256 rewardsToHarvest = (staker[msg.sender].amount * accumulatedRewardsPerShare) -
             staker[msg.sender].rewardDebt;
@@ -62,6 +73,11 @@ contract TBpool is ERC1155Holder {
         _sendViaCall(payable(msg.sender), rewardsToHarvest);
     }
 
+    /**
+     * @dev This function is used for the staker to harvest the remaining rewards and unstake all his/her tokens
+     * @param _tbID array with the id of the TB which have been staked by the address
+     * @param _quantity array with the quantity of each TB that have been staked by the address
+     **/
     function withdraw(uint256[] memory _tbID, uint256[] memory _quantity) public {
         require(staker[msg.sender].amount > 0, "Withdraw amount can't be zero");
 

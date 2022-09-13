@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: agpl-3.0
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 interface ITBpool {
-
     struct PoolStaker {
         uint256 amount; // The NFT tokens quantity the user has staked.
         uint256 rewards; // The reward tokens quantity the user can harvest
@@ -19,20 +18,18 @@ interface ITBpool {
     /**
      * @dev This function is used for the staker to harvest the rewards he is entitled to
      **/
-    function harvestRewards() public;
+    function harvestRewards() external;
 
     /**
      * @dev This function is used for the staker to harvest the remaining rewards and unstake all his/her tokens
      * @param _tbID array with the id of the TB which have been staked by the address
      * @param _quantity array with the quantity of each TB that have been staked by the address
      **/
-    function withdraw(uint256[] memory _tbID, uint256[] memory _quantity) public;
+    function withdraw(uint256[] memory _tbID, uint256[] memory _quantity) external;
 
     /**
      * @dev This function returns an array of all TBs which are available for sale
      * @notice This is an expensive view call but for demonstration purposes it works. Alternate solution is to build a subgraph
      **/
     // function getAllAvailableTBsForSale() external view returns (TBData[] memory);
-
-
 }
