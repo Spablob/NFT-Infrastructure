@@ -5,4 +5,4 @@ NFT infrastructure that allows Creators/Investor to register their Intelectual P
 
 NFT staking, value transfer and reward collection implementation. Every time an NFT is rented, minted or re-sold there is an inflow to the staker's pool where they can they harvest their respective rewards. 
 
-Project Status: Ongoing
+You can check the website here: https://nft-licensing-renting-ui.vercel.app/
