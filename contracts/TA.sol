@@ -125,6 +125,14 @@ contract TA is ERC1155, Ownable, ITA {
     }
 
     /**
+     * @dev This function is used return a link to check IPFS data online
+     * @param _taID the id of the TA already minted in the "mintTA" function
+     **/
+    function uri(uint256 _taID) public view override returns (string memory) {
+        return string(abi.encodePacked("ipfs://", taIDtoData[_taID].metadataCID, "/"));
+    }
+
+    /**
      * @dev This function is to get all the data of a given TA
      * @param _taID the target TA±
      **/
@@ -272,14 +280,6 @@ contract TA is ERC1155, Ownable, ITA {
      **/
     function getTBpoolAddress() external view override returns (address payable) {
         return tBpoolAddress;
-    }
-
-    /**
-     * @dev This function is used return a link to check IPFS data online
-     * @param _taID the id of the TA already minted in the "mintTA" function
-     **/
-    function uri(uint256 _taID) public view override returns (string memory) {
-        return string(abi.encodePacked("ipfs://", taIDtoData[_taID].metadataCID, "/"));
     }
 
     /**
