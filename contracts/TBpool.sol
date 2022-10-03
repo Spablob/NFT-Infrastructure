@@ -1,23 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
+import {ITBpool} from "./interfaces/Itbpool.sol";
 import {TA} from "./TA.sol";
 import {TB} from "./TB.sol";
-import "hardhat/console.sol";
-
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
 /**
  * @title TB staking pool
  * @dev Used to distribute rewards to TB holders
  **/
-contract TBpool is ERC1155Holder {
+contract TBpool is ERC1155Holder, ITBpool {
     //===============Variables=============
-    struct PoolStaker {
-        uint256 amount; // The NFT tokens quantity the user has staked.
-        uint256 rewards; // The reward tokens quantity the user can harvest
-        uint256 rewardDebt; // The amount relative to accumulatedRewardsPerShare the user can't get as reward
-    }
 
     TB TBcontract;
 
@@ -38,7 +32,7 @@ contract TBpool is ERC1155Holder {
      * @param _tbID the id of the TB which will be staked
      * @param _quantity quantity of TB to be staked
      **/
-    function stakeNFT(uint256 _tbID, uint256 _quantity) external {
+    function stakeNFT(uint256 _tbID, uint256 _quantity) external override {
         require(TBcontract.balanceOf(msg.sender, _tbID) >= _quantity, "User does not own enough tokens");
 
         // Pay rewards
@@ -59,7 +53,7 @@ contract TBpool is ERC1155Holder {
     /**
      * @dev This function is used for the staker to harvest the rewards he is entitled to
      **/
-    function harvestRewards() public {
+    function harvestRewards() public override {
         uint256 rewardsToHarvest = (staker[msg.sender].amount * accumulatedRewardsPerShare) -
             staker[msg.sender].rewardDebt;
 
@@ -78,7 +72,7 @@ contract TBpool is ERC1155Holder {
      * @param _tbID array with the id of the TB which have been staked by the address
      * @param _quantity array with the quantity of each TB that have been staked by the address
      **/
-    function withdraw(uint256[] memory _tbID, uint256[] memory _quantity) public {
+    function withdraw(uint256[] memory _tbID, uint256[] memory _quantity) public override {
         require(staker[msg.sender].amount > 0, "Withdraw amount can't be zero");
 
         // Check if all tbIDs and quantities were supplied correctly
@@ -106,7 +100,7 @@ contract TBpool is ERC1155Holder {
         TBcontract.safeBatchTransferFrom(address(this), msg.sender, _tbID, _quantity, "");
     }
 
-    function updatePoolRewards(uint256 _inflow) private {
+    function _updatePoolRewards(uint256 _inflow) private {
         if (tokensStaked == 0) {
             lastInflow += 1;
             return;
@@ -121,6 +115,6 @@ contract TBpool is ERC1155Holder {
     }
 
     receive() external payable {
-        updatePoolRewards(msg.value);
+        _updatePoolRewards(msg.value);
     }
 }

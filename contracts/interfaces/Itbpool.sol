@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: agpl-3.0
 pragma solidity 0.8.17;
 
+/**
+ * @title Marketplace interface contract contract
+ * @dev Main point of interaction the Marketplace contract
+ **/
 interface ITBpool {
     struct PoolStaker {
         uint256 amount; // The NFT tokens quantity the user has staked.
@@ -26,10 +30,4 @@ interface ITBpool {
      * @param _quantity array with the quantity of each TB that have been staked by the address
      **/
     function withdraw(uint256[] memory _tbID, uint256[] memory _quantity) external;
-
-    /**
-     * @dev This function returns an array of all TBs which are available for sale
-     * @notice This is an expensive view call but for demonstration purposes it works. Alternate solution is to build a subgraph
-     **/
-    // function getAllAvailableTBsForSale() external view returns (TBData[] memory);
 }

@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: agpl-3.0
 pragma solidity 0.8.17;
 
+/**
+ * @title Marketplace interface contract contract
+ * @dev Main point of interaction the Marketplace contract
+ **/
 interface IMarketplace {
     event TBListedForSale(uint256 indexed tbID, uint256 quantity, uint256 salePrice);
     event TBBought(uint256 indexed tbID, uint256 quantity);
 
-    struct Offer {
+    struct OfferData {
         uint256 offerID;
         uint256 tbID;
         uint256 salePrice;
@@ -31,11 +35,20 @@ interface IMarketplace {
      * @dev This function is used to buy a certain available quantity of a given TB Id
      * @param _offerID the id of the offer being purchased
      **/
-    function buyTB(uint256 _offerID) external;
+    function buyTB(uint256 _offerID) external payable;
 
     /**
-     * @dev This function returns an array of all TBs which are available for sale
-     * @notice This is an expensive view call but for demonstration purposes it works. Alternate solution is to build a subgraph
+     * @dev Returns the TB pool address
      **/
-    // function getAllAvailableTBsForSale() external view returns (TBData[] memory);
+    function getTBpoolAddress() external view returns (address payable);
+
+    /**
+     * @dev Returns the TA contract address
+     **/
+    function getTAaddress() external view returns (address);
+
+    /**
+     * @dev This function returns an array of all available offers
+     **/
+    function getAllAvailableOffers() external view returns (OfferData[] memory allAvailableOffersData);
 }

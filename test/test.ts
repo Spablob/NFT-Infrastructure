@@ -40,10 +40,16 @@ describe('NFT Licensing', async () => {
     // console.log({ 'Marketplace contract deployed to': marketplace.address });
 
     await TAcontract.connect(accounts[0]).setInstances(pool.address);
-    await TBcontract.connect(accounts[0]).setInstances(pool.address);
+    await TBcontract.connect(accounts[0]).setInstances(pool.address, marketplace.address);
   });
 
   describe('TA Interactions', async () => {
+    it('Check if addresses are correct', async () => {
+      expect(await TAcontract.getTBpoolAddress()).to.be.equal(pool.address);
+      expect(await TBcontract.getTBpoolAddress()).to.be.equal(pool.address);
+      expect(await marketplace.getTBpoolAddress()).to.be.equal(pool.address);
+      expect(await marketplace.getTAaddress()).to.be.equal(TAcontract.address);
+    });
     it('User 1 fail to reset TB address', async () => {
       await expect(TAcontract.connect(accounts[1]).setInstances(pool.address)).to.be.revertedWith(
         'Ownable: caller is not the owner'
@@ -61,6 +67,19 @@ describe('NFT Licensing', async () => {
       );
       expect(await TAcontract.uri(1)).to.be.equal('ipfs://QmTmfTk7N4SBZu2WeUjtMh9CPQvKs4gGH4fjqR5GiMBys9/');
       expect(await TAcontract.balanceOf(accounts[1].address, 1)).to.be.equal(10000);
+      // State changes are made correctly
+      expect((await TAcontract.getTA(1)).name).to.be.equal('Fried Rice');
+      expect((await TAcontract.getTA(1)).metadataCID).to.be.equal('QmTmfTk7N4SBZu2WeUjtMh9CPQvKs4gGH4fjqR5GiMBys9');
+      expect((await TAcontract.getTA(1)).priceToRent).to.be.equal(ethers.utils.parseEther('1'));
+      expect((await TAcontract.getTA(1)).rentingPercentage).to.be.equal('8000');
+      expect((await TAcontract.getTA(1)).rentDuration).to.be.equal('604800');
+      expect((await TAcontract.getTA(1)).amountMinted).to.be.equal(10000);
+      expect((await TAcontract.getTA(1)).totalRented).to.be.equal(0);
+      expect((await TAcontract.getTA(1)).TAowner).to.be.equal(accounts[1].address);
+    });
+    it('User 2 checks if there are TAs available to rent', async () => {
+      expect((await TAcontract.getAllAvailableTAtoRent()).totalAvailableToRent[0]).to.be.equal(10000);
+      expect((await TAcontract.getAllAvailableTAtoRent()).availableTAsData[0].name).to.be.equal('Fried Rice');
     });
     it('User 2 unsuccessfully rents TA due to lower msg.value than price', async () => {
       await expect(
@@ -69,10 +88,19 @@ describe('NFT Licensing', async () => {
     });
     it('User 2 successfully rents TA', async () => {
       await TAcontract.connect(accounts[2]).rentTA(1, { value: ethers.utils.parseEther('1') });
-      expect(await TAcontract.totalTARented(1)).to.be.equal(1);
+      const TAData = await TAcontract.getTA(1);
+      expect(TAData.totalRented).to.be.equal(1);
       expect(await TAcontract.activeRent(accounts[2].address, 1)).to.be.equal(true);
       expect(await ethers.provider.getBalance(pool.address)).to.be.equal(ethers.utils.parseEther('0.2'));
+      expect((await TAcontract.getTA(1)).totalRented).to.be.equal(1);
+
+      //Multiple returns test
+      const TargetRentedTAs = await TAcontract.getTargetLifetimeRentedTAs(accounts[2].address);
+      expect(TargetRentedTAs[0].name).to.be.equal('Fried Rice');
+      //or
+      expect((await TAcontract.getTargetLifetimeRentedTAs(accounts[2].address))[0].name).to.be.equal('Fried Rice');
     });
+
     it('User 2 unsuccessfully rents TA before expiry', async () => {
       await expect(
         TAcontract.connect(accounts[2]).rentTA(1, { value: ethers.utils.parseEther('1') })
@@ -81,13 +109,14 @@ describe('NFT Licensing', async () => {
     it('User 1 checks if TA of User 2 has expired. But it is not expired', async () => {
       TAcontract.connect(accounts[1]).checkIfTAisActive(1, accounts[2].address);
       expect(await TAcontract.activeRent(accounts[2].address, 1)).to.be.equal(true);
-      expect(await TAcontract.totalTARented(1)).to.be.equal(1);
+      const TAData = await TAcontract.getTA(1);
+      expect(TAData.totalRented).to.be.equal(1);
     });
     it('User 1 checks if TA of User 2 has expired. It is expired', async () => {
       await ethers.provider.send('evm_increaseTime', [704801]);
       await TAcontract.connect(accounts[1]).checkIfTAisActive(1, accounts[2].address);
       expect(await TAcontract.activeRent(accounts[2].address, 1)).to.be.equal(false);
-      expect(await TAcontract.totalTARented(1)).to.be.equal(0);
+      expect((await TAcontract.getTA(1)).totalRented).to.be.equal(0);
     });
     it('User 3 attempts to enable TB mint but is not renting', async () => {
       await expect(
@@ -102,7 +131,8 @@ describe('NFT Licensing', async () => {
     });
     it('User 3 sucessfully rents TA', async () => {
       await TAcontract.connect(accounts[3]).rentTA(1, { value: ethers.utils.parseEther('1') });
-      expect(await TAcontract.totalTARented(1)).to.be.equal(1);
+      const TAData = await TAcontract.getTA(1);
+      expect(TAData.totalRented).to.be.equal(1);
       expect(await TAcontract.activeRent(accounts[3].address, 1)).to.be.equal(true);
       expect(await ethers.provider.getBalance(pool.address)).to.be.equal(ethers.utils.parseEther('0.4'));
     });
@@ -125,6 +155,16 @@ describe('NFT Licensing', async () => {
         ethers.utils.parseEther('2'),
         1500
       );
+      // State changes
+      expect((await TBcontract.getTB(1)).taID).to.be.equal(1);
+      expect((await TBcontract.getTB(1)).mintPrice).to.be.equal(ethers.utils.parseEther('2'));
+      expect((await TBcontract.getTB(1)).royaltyPercentage).to.be.equal(1500);
+      expect((await TBcontract.getTB(1)).salePrice).to.be.equal(0);
+      expect((await TBcontract.getTB(1)).metadataCID).to.be.equal('QmTmfTk7N4SBZu2WeUjtMh9CPQvKs4gGH4fjqR5GiMBys9');
+      expect((await TBcontract.getTB(1)).markedForSale).to.be.equal(false);
+      expect((await TBcontract.getTB(1)).mintEnabled).to.be.equal(true);
+      expect((await TBcontract.getTB(1)).TBowner).to.be.equal(accounts[3].address);
+      expect((await TBcontract.getAllAvailableTBsToMint()).allAvailableTBsToMint[0].tbID).to.be.equal(1);
     });
     it('User 3 tries to register with same name or metadata twice but fails', async () => {
       await expect(
@@ -138,10 +178,11 @@ describe('NFT Licensing', async () => {
           ethers.utils.parseEther('2'),
           15
         )
-      ).to.be.revertedWith('Each metadataALink can only be minted once');
+      ).to.be.revertedWith('Each metadataLink can only be minted once');
     });
+
     it('User 4 tries to mint TB that is not enabled', async () => {
-      await expect(TBcontract.connect(accounts[4]).mintTB(2, 3)).to.be.revertedWith('This TB is not available to mint');
+      await expect(TBcontract.connect(accounts[4]).mintTB(2, 3)).to.be.revertedWith('TA license has expired');
     });
     it('User 4 tries to mint TB that is enabled but without enough ETH', async () => {
       await expect(TBcontract.connect(accounts[4]).mintTB(1, 3)).to.be.revertedWith('Not enough ETH was sent');
@@ -154,11 +195,14 @@ describe('NFT Licensing', async () => {
     it('User 4 tries to list for sale. Fails because it does not possess the NFT', async () => {
       TBcontract.connect(accounts[4]).setApprovalForAll(marketplace.address, true);
       await expect(
-        marketplace.connect(accounts[4]).listForSale(10, 5, ethers.utils.parseEther('10'))
+        marketplace.connect(accounts[4]).listForSale(1, 5, ethers.utils.parseEther('10'))
       ).to.be.revertedWith('User does not own enough tokens');
     });
     it('User 4 sucessfully lists for sale', async () => {
       await marketplace.connect(accounts[4]).listForSale(1, 3, ethers.utils.parseEther('10'));
+      expect((await marketplace.getAllAvailableOffers())[0].tbID).to.be.equal(1);
+      expect((await marketplace.getAllAvailableOffers())[0].quantity).to.be.equal(3);
+      expect((await marketplace.getAllAvailableOffers())[0].salePrice).to.be.equal(ethers.utils.parseEther('10'));
     });
     it('User 5 tries to buy. But there is not enought ETH', async () => {
       TBcontract.connect(accounts[5]).setApprovalForAll(marketplace.address, true);
@@ -235,7 +279,9 @@ describe('NFT Licensing', async () => {
     it('User 5 fails to withdraws due to error in tbIDs introduction', async () => {
       const withdraw5_ids = [1];
       const withdraw5_qty = [2];
-      await expect(pool.connect(accounts[5]).withdraw(withdraw5_ids,withdraw5_qty)).to.be.revertedWith('Quantity was wrongly introduced');
+      await expect(pool.connect(accounts[5]).withdraw(withdraw5_ids, withdraw5_qty)).to.be.revertedWith(
+        'Quantity was wrongly introduced'
+      );
     });
     it('User 5 successfully withdraws', async () => {
       expect(await pool.connect(accounts[5]).depositsMade(accounts[5].address, 1)).to.be.equal(1);
@@ -244,7 +290,7 @@ describe('NFT Licensing', async () => {
 
       const withdraw5_ids = [1];
       const withdraw5_qty = [1];
-      await pool.connect(accounts[5]).withdraw(withdraw5_ids,withdraw5_qty);
+      await pool.connect(accounts[5]).withdraw(withdraw5_ids, withdraw5_qty);
 
       expect(await pool.connect(accounts[5]).depositsMade(accounts[5].address, 1)).to.be.equal(0);
       expect(await TBcontract.balanceOf(accounts[5].address, 1)).to.be.equal(3);

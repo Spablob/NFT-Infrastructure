@@ -1,35 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
+import {IMarketplace} from "./interfaces/IMarketplace.sol";
 import {TA} from "./TA.sol";
 import {TB} from "./TB.sol";
-import "hardhat/console.sol";
-
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
 /**
  * @title TB Marketplace contract
  * @dev Used to buy and sell TB tokens
  **/
-contract Marketplace is ERC1155Holder {
+contract Marketplace is ERC1155Holder, IMarketplace {
     //===============Variables=============
-
-    struct OfferData {
-        uint256 offerID;
-        uint256 tbID;
-        uint256 salePrice;
-        uint256 quantity;
-        address payable seller;
-        bool activeSale;
-    }
 
     TA TAcontract;
     TB TBcontract;
 
     address payable tBpoolAddress;
+    address tAaddress;
     uint256 nrOfferIDs;
 
     mapping(uint256 => OfferData) idtoOffer; // stores offer data for each offer id
+
+    uint256[] availableOffers;
 
     //===============Functions=============
 
@@ -41,6 +34,7 @@ contract Marketplace is ERC1155Holder {
         TBcontract = TB(_TBaddress);
         TAcontract = TA(_TAaddress);
         tBpoolAddress = _tBpoolAddress;
+        tAaddress = _TAaddress;
     }
 
     /**
@@ -54,12 +48,12 @@ contract Marketplace is ERC1155Holder {
         uint256 _tbID,
         uint256 _quantity,
         uint256 _salePrice
-    ) external {
-        require(TBcontract.balanceOf(msg.sender, _tbID) >= _quantity, "User does not own enough tokens");
+    ) external override {
         require(
             TAcontract.checkIfTAisActive(TBcontract.getTAid(_tbID), TBcontract.getTBowner(_tbID)) == true,
             "TA license has expired"
         );
+        require(TBcontract.balanceOf(msg.sender, _tbID) >= _quantity, "User does not own enough tokens");
 
         nrOfferIDs++;
         idtoOffer[nrOfferIDs] = OfferData(nrOfferIDs, _tbID, _salePrice, _quantity, payable(msg.sender), true);
@@ -71,30 +65,58 @@ contract Marketplace is ERC1155Holder {
      * @dev This function is used to buy a certain available quantity of a given TB Id
      * @param _offerID the id of the offer being purchased
      **/
-    function buyTB(uint256 _offerID) external payable {
-        require(idtoOffer[_offerID].activeSale == true, "The offer is no longer in the market");
-        require(msg.value == idtoOffer[_offerID].salePrice, "Not enough ETH");
+    function buyTB(uint256 _offerID) external payable override {
+        OfferData memory offer = idtoOffer[_offerID];
+
+        require(offer.activeSale == true, "The offer is no longer in the market");
+        require(msg.value == offer.salePrice, "Not enough ETH");
 
         idtoOffer[_offerID].activeSale = false;
 
         _sendViaCall(
-            TBcontract.getTBowner(idtoOffer[_offerID].tbID),
-            (msg.value * TBcontract.getRoyaltyPercentage(idtoOffer[_offerID].tbID)) / 10000
+            TBcontract.getTBowner(offer.tbID),
+            (msg.value * TBcontract.getRoyaltyPercentage(offer.tbID)) / 10000
         ); // 15% to TB creator
-        _sendViaCall(TAcontract.getTAowner(TBcontract.getTAid(idtoOffer[_offerID].tbID)), (msg.value * 2500) / 100000); // 2.5% to TA owner
+        _sendViaCall(TAcontract.getTAowner(TBcontract.getTAid(offer.tbID)), (msg.value * 2500) / 100000); // 2.5% to TA owner
         _sendViaCall(tBpoolAddress, (msg.value * 2500) / 100000); // 2.5% to TB holders
-        _sendViaCall(
-            idtoOffer[_offerID].seller,
-            (msg.value * (9500 - TBcontract.getRoyaltyPercentage(idtoOffer[_offerID].tbID))) / 10000
-        ); // 80% to TB previous owner
+        _sendViaCall(offer.seller, (msg.value * (9500 - TBcontract.getRoyaltyPercentage(offer.tbID))) / 10000); // 80% to TB previous owner
 
-        TBcontract.safeTransferFrom(
-            address(this),
-            msg.sender,
-            idtoOffer[_offerID].tbID,
-            idtoOffer[_offerID].quantity,
-            ""
-        );
+        if (!TBcontract.getHasMinted(msg.sender, offer.tbID)) {
+            TBcontract.updateHasMintedOrOwned(msg.sender, offer.tbID);
+        }
+
+        TBcontract.safeTransferFrom(address(this), msg.sender, offer.tbID, offer.quantity, "");
+    }
+
+    /**
+     * @dev Returns the TB pool address
+     **/
+    function getTBpoolAddress() external view override returns (address payable) {
+        return tBpoolAddress;
+    }
+
+    /**
+     * @dev Returns the TA contract address
+     **/
+    function getTAaddress() external view override returns (address) {
+        return tAaddress;
+    }
+
+    /**
+     * @dev This function returns an array of all available offers
+     **/
+    function getAllAvailableOffers() external view override returns (OfferData[] memory allAvailableOffersData) {
+        allAvailableOffersData = new OfferData[](nrOfferIDs);
+
+        uint256 j;
+
+        for (uint256 i = 1; i <= nrOfferIDs; i++) {
+            OfferData memory offer = idtoOffer[i];
+            if (offer.activeSale) {
+                allAvailableOffersData[j] = offer;
+                j++;
+            }
+        }
     }
 
     function _sendViaCall(address payable _to, uint256 _value) private {
