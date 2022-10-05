@@ -35,8 +35,12 @@ contract TBpool is ERC1155Holder, ITBpool {
     function stakeNFT(uint256 _tbID, uint256 _quantity) external override {
         require(TBcontract.balanceOf(msg.sender, _tbID) >= _quantity, "User does not own enough tokens");
 
-        // Pay rewards
-        harvestRewards();
+        // rewards
+        uint256 rewardsToHarvest = (staker[msg.sender].amount * accumulatedRewardsPerShare) -
+            staker[msg.sender].rewardDebt;
+
+        staker[msg.sender].rewards = 0;
+        staker[msg.sender].rewardDebt = (staker[msg.sender].amount * accumulatedRewardsPerShare);
 
         // Update current staker
         staker[msg.sender].amount = staker[msg.sender].amount + _quantity;
@@ -48,6 +52,11 @@ contract TBpool is ERC1155Holder, ITBpool {
         // Stake NFTs
         depositsMade[msg.sender][_tbID] += _quantity;
         TBcontract.safeTransferFrom(msg.sender, address(this), _tbID, _quantity, "");
+
+        // send rewards
+        if (rewardsToHarvest > 0) {
+            _sendViaCall(payable(msg.sender), rewardsToHarvest);
+        }
     }
 
     /**
@@ -83,8 +92,12 @@ contract TBpool is ERC1155Holder, ITBpool {
         }
         require(nftSum == staker[msg.sender].amount, "User has not introduced all IDs that he/she has staked");
 
-        // Pay rewards
-        harvestRewards();
+        // rewards
+        uint256 rewardsToHarvest = (staker[msg.sender].amount * accumulatedRewardsPerShare) -
+            staker[msg.sender].rewardDebt;
+
+        staker[msg.sender].rewards = 0;
+        staker[msg.sender].rewardDebt = (staker[msg.sender].amount * accumulatedRewardsPerShare);
 
         // Update pool
         tokensStaked -= staker[msg.sender].amount;
@@ -98,6 +111,11 @@ contract TBpool is ERC1155Holder, ITBpool {
 
         // Unstake NFTs
         TBcontract.safeBatchTransferFrom(address(this), msg.sender, _tbID, _quantity, "");
+
+        // send rewards
+        if (rewardsToHarvest > 0) {
+            _sendViaCall(payable(msg.sender), rewardsToHarvest);
+        }
     }
 
     function _updatePoolRewards(uint256 _inflow) private {
