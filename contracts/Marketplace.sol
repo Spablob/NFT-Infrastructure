@@ -31,6 +31,9 @@ contract Marketplace is ERC1155Holder, IMarketplace {
         address payable _tBpoolAddress,
         address payable _TAaddress
     ) {
+        require(_TBaddress != address(0));
+        require(_tBpoolAddress != address(0));
+        require(_TAaddress != address(0));
         TBcontract = TB(_TBaddress);
         TAcontract = TA(_TAaddress);
         tBpoolAddress = _tBpoolAddress;
@@ -108,7 +111,7 @@ contract Marketplace is ERC1155Holder, IMarketplace {
     function getAllAvailableOffers() external view override returns (OfferData[] memory allAvailableOffersData) {
         allAvailableOffersData = new OfferData[](nrOfferIDs);
 
-        uint256 j;
+        uint256 j = 0;
 
         for (uint256 i = 1; i <= nrOfferIDs; i++) {
             OfferData memory offer = idtoOffer[i];

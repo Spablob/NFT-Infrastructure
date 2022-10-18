@@ -35,6 +35,7 @@ contract TA is ERC1155, Ownable, ITA {
      * @param _tBpoolAddress address of TB pool
      **/
     function setInstances(address payable _tBpoolAddress) external override onlyOwner {
+        require(_tBpoolAddress != address(0));
         tBpoolAddress = _tBpoolAddress;
     }
 
@@ -175,7 +176,7 @@ contract TA is ERC1155, Ownable, ITA {
         availableTAsData = new TAData[](nrTaIDs);
 
         totalAvailableToRent = new uint256[](nrTaIDs);
-        uint256 k;
+        uint256 k = 0;
 
         for (uint256 i = 1; i <= nrTaIDs; i++) {
             TAData memory ta = taIDtoData[i];
@@ -205,7 +206,7 @@ contract TA is ERC1155, Ownable, ITA {
         targetAvailableToRentTAs = new TAData[](nrTaIDs);
 
         totalAvailableToRent = new uint256[](nrTaIDs);
-        uint256 k;
+        uint256 k = 0;
 
         for (uint256 i = 1; i <= nrTaIDs; i++) {
             TAData memory ta = taIDtoData[i];
@@ -235,7 +236,7 @@ contract TA is ERC1155, Ownable, ITA {
         targetActiveRentedTAsData = new TAData[](rentedTAsLength);
         remainingActiveTime = new uint256[](rentedTAsLength);
 
-        uint256 j;
+        uint256 j = 0;
         uint256 currentTimestamp = block.timestamp;
         uint256 taId;
 

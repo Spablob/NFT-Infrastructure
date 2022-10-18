@@ -29,6 +29,7 @@ contract TB is ERC1155, Ownable, ITB {
 
     //===============Functions=============
     constructor(address _TAaddress) ERC1155("") {
+        require(_TAaddress != address(0));
         TAcontract = TA(_TAaddress);
     }
 
@@ -42,6 +43,8 @@ contract TB is ERC1155, Ownable, ITB {
         override
         onlyOwner
     {
+        require(_tBpoolAddress != address(0));
+        require(_marketplaceAddress != address(0));
         tBpoolAddress = _tBpoolAddress;
         marketplaceAddress = _marketplaceAddress;
     }
@@ -100,14 +103,14 @@ contract TB is ERC1155, Ownable, ITB {
         require(TAcontract.checkIfTAisActive(tb.taID, tb.TBowner) == true, "TA license has expired");
         require(tb.mintPrice * _quantity == msg.value, "Not enough ETH was sent");
 
-        _sendViaCall(tb.TBowner, (msg.value * 8000) / 10000); // 80% to TB enabler
-        _sendViaCall(TAcontract.getTAowner(tb.taID), (msg.value * 1000) / 10000); // 10% to TA owner
-        _sendViaCall(tBpoolAddress, (msg.value * 1000) / 10000); // The last 10% to TB holders remain in this contract
-
         if (!hasMinted[msg.sender][_tbID]) {
             mintedTBs[msg.sender].push(_tbID);
             hasMinted[msg.sender][_tbID] = true;
         }
+
+        _sendViaCall(tb.TBowner, (msg.value * 8000) / 10000); // 80% to TB enabler
+        _sendViaCall(TAcontract.getTAowner(tb.taID), (msg.value * 1000) / 10000); // 10% to TA owner
+        _sendViaCall(tBpoolAddress, (msg.value * 1000) / 10000); // The last 10% to TB holders remain in this contract
 
         _mint(msg.sender, _tbID, _quantity, "");
     }
@@ -181,7 +184,7 @@ contract TB is ERC1155, Ownable, ITB {
         allAvailableTBsToMint = new TBData[](nrTbIDs);
         remainingActiveTime = new uint256[](nrTbIDs);
 
-        uint256 j;
+        uint256 j = 0;
         uint256 currentTimestamp = block.timestamp;
         for (uint256 i = 1; i <= nrTbIDs; i++) {
             TBData memory tb = tbIDtoData[i];

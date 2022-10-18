@@ -24,6 +24,7 @@ contract TBpool is ERC1155Holder, ITBpool {
 
     //===============Functions=============
     constructor(address payable _TBaddress) {
+        require(_TBaddress != address(0));
         TBcontract = TB(_TBaddress);
     }
 
